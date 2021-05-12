@@ -54,6 +54,28 @@ router.post('/', (req, res) => {
     });
 });
 
+router.post('/login', (req, res) => {
+    //expects {email: 'test@test.com, password: 'password1234'}
+    User.findOne({
+        where: {
+            email: req.body.email
+        }
+    })
+    .then(dbUserData => {
+        if(!dbUserData){
+            res.status(404).json({message: "Email is not associated to a user."});
+            return;
+        }
+        
+        if(dbUserData.checkPassword(req.body.password)){
+            res.json({user: dbUserData, message: "You are now logged in!"});
+        }
+        else{
+            res.status(400).json({message: "Please enter a valid password."});
+        }
+    });
+});
+
 //Put /api/users/1
 router.put('/:id', (req, res) => {
     User.update( req.body, {
