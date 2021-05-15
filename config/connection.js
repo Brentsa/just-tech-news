@@ -18,7 +18,4 @@ else{
     });
 }
 
-
-
-
 module.exports = sequelize;
