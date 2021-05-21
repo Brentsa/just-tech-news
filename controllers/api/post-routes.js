@@ -79,7 +79,9 @@ router.get('/:id', (req, res) => {
 
 //Create a New Post
 router.post('/', (req, res) => {
-    const {title, post_url, user_id} = req.body;
+    const {title, post_url} = req.body;
+    const user_id = req.session.user_id;
+    
     Post.create({
         title,
         post_url,
