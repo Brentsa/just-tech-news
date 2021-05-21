@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const {Post, User, Vote, Comment} = require('../../models');
 const sequelize = require('../../config/connection');
+const withAuth = require('../../utils/auth');
 
 //Get All Posts
 router.get('/', (req, res) => {
@@ -78,8 +79,10 @@ router.get('/:id', (req, res) => {
 });
 
 //Create a New Post
-router.post('/', (req, res) => {
-    const {title, post_url, user_id} = req.body;
+router.post('/', withAuth, (req, res) => {
+    const {title, post_url} = req.body;
+    const user_id = req.session.user_id;
+
     Post.create({
         title,
         post_url,
@@ -93,17 +96,24 @@ router.post('/', (req, res) => {
 });
 
 //Update a post with an upvote
-router.put('/upvote', (req, res) => {
-    Post.upvote(req.body, {Vote})
-    .then(dbUpdatedData => res.json(dbUpdatedData))
-    .catch(err => {
-        console.log(err);
-        res.status(400).json(err);
-    });
+router.put('/upvote', withAuth, (req, res) => {
+    // make sure the session exists first
+
+    console.log({ ...req.body, user_id: req.session.user_id });
+
+    if (req.session) {
+        // pass session id along with all destructured properties on req.body
+        Post.upvote({ ...req.body, user_id: req.session.user_id }, { Vote, Comment, User })
+            .then(updatedVoteData => res.json(updatedVoteData))
+            .catch(err => {
+            console.log(err);
+            res.status(500).json(err);
+        });
+    }
 });
 
 //Update a Post's Title
-router.put('/:id', (req, res) => {
+router.put('/:id', withAuth, (req, res) => {
     const {title} = req.body;
     Post.update(
         {
@@ -130,24 +140,24 @@ router.put('/:id', (req, res) => {
 })
 
 //Delete a Post
-router.delete('/:id', (req, res) => {
+router.delete('/:id', withAuth, (req, res) => {
+    console.log('id', req.params.id);
     Post.destroy({
-        where:{
-            id: req.params.id
-        }
+      where: {
+        id: req.params.id
+      }
     })
-    .then(dbUpdatedData => {
-        if(!dbUpdatedData){
-            res.status(404).json({message: 'Post with specified id not found.'})
-            return;
+      .then(dbPostData => {
+        if (!dbPostData) {
+          res.status(404).json({ message: 'No post found with this id' });
+          return;
         }
-
-        res.json(dbUpdatedData);
-    })
-    .catch(err => {
+        res.json(dbPostData);
+      })
+      .catch(err => {
         console.log(err);
         res.status(500).json(err);
-    });
+      });
 });
 
 module.exports = router;
